@@ -20,6 +20,8 @@ assign opcode = instruction[6: 0];
 assign source_reg_1 = instruction[19: 15];
 assign source_reg_2 = instruction[24: 20];
 assign destination_reg = instruction[11: 7];
+assign subfunction_3 = instruction[11: 7];
+assign subfunction_7 = instruction[31: 25];
 
 wire[31: 0] sign_extension;
 assign sign_extension = {32{instruction[31]}};
