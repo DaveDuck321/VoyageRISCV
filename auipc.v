@@ -1,4 +1,4 @@
-module lui(
+module auipc(
     input wire clk,
     input wire [31: 0] program_counter_of_lui,
     input [31: 0] immediate,
