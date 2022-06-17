@@ -12,9 +12,8 @@
 `define SOME_ALU_OPCODE_ITYPE  7'b0010011
 `define SOME_ALU_OPCODE_RTYPE  7'b0110011
 
-`define FENCE_OPCODE    7'b0010111  // I-Type
-`define ECALL_OPCODE    7'b1110011  // TODO: maybe treat as I-Type?
-`define EBREAK_OPCODE   7'b1110011  // TODO: maybe treat as I-Type?
+`define FENCE_OPCODE    7'b0001111  // I-Type
+`define DEBUG_OPCODE    7'b1110011  // TODO: maybe treat as I-Type?
 
 
 // ALU subfunctions
@@ -27,5 +26,27 @@
 `define OR_SUBFUN3      3'b110
 `define AND_SUBFUN3     3'b111
 
+// Branching subfunctions
+`define BEQ_SUBFUNC3    3'b000
+`define BNE_SUBFUNC3    3'b001
+`define BLT_SUBFUNC3    3'b100
+`define BGT_SUBFUNC3    3'b101
+`define BLTU_SUBFUNC3   3'b110
+`define BGEU_SUBFUNC3   3'b111
+
 `define SIGNED_MODE_IMMEDIATE_INDICATOR     7'b0100000
 `define UNSIGNED_MODE_IMMEDIATE_INDICATOR   7'b0000000
+
+
+// Microarchitecture specific defines
+`define ONEHOT_DEBUG_OPCODE     0
+`define ONEHOT_LUI_INDEX        1
+`define ONEHOT_AUIPI_INDEX      2
+`define ONEHOT_JAL_INDEX        3
+`define ONEHOT_JALR_INDEX       4
+`define ONEHOT_BRANCH_INDEX     5
+`define ONEHOT_LOAD_INDEX       6
+`define ONEHOT_STORE_INDEX      7
+`define ONEHOT_ITYPE_ALU_INDEX  8
+`define ONEHOT_RTYPE_ALU_INDEX  9
+`define ONEHOT_FENCE_INDEX      10
