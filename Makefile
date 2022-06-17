@@ -1,5 +1,5 @@
 PROJ = riscv
-FILES = lui.v auipc.v jumps.v alu_immediate_type.v alu_register_type.v instruction_decode.v registers.v toplevel.v
+FILES = lui.v auipc.v branches.v jumps.v alu_immediate_type.v alu_register_type.v instruction_decode.v registers.v toplevel.v
 BUILD_DIR = build
 
 simulation: lint
