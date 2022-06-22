@@ -6,7 +6,7 @@ BUILD_DIR = build
 simulation: lint
 	iverilog -o $(BUILD_DIR)/$(PROJ).out iverilog_toplevel.v $(COMMON_FILES)
 
-hardware: lint
+hardware_ice40: lint
 	yosys -q -p "synth_ice40 -top top -json $(BUILD_DIR)/$(PROJ).json" icefun_toplevel.v $(COMMON_FILES)
 	nextpnr-ice40 -r --hx8k --json $(BUILD_DIR)/$(PROJ).json --package cb132 --asc $(BUILD_DIR)/$(PROJ).asc --opt-timing --pcf pcf/iceFun.pcf
 	icepack $(BUILD_DIR)/$(PROJ).asc $(BUILD_DIR)/$(PROJ).bin
