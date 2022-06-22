@@ -1,4 +1,4 @@
-module JALR(
+module jalr(
     input wire clk,
     input wire [31: 0] program_counter_of_JALR,
     input wire [2: 0] subfunction_3,
@@ -31,7 +31,7 @@ endmodule
 
 
 
-module JAL(
+module jal(
     input wire clk,
     input wire [31: 0] program_counter_of_JAL,
     input wire [31: 0] immediate,
