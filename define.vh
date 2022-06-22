@@ -37,6 +37,16 @@
 `define SIGNED_MODE_IMMEDIATE_INDICATOR     7'b0100000
 `define UNSIGNED_MODE_IMMEDIATE_INDICATOR   7'b0000000
 
+`define LB_SUBFUN3  3'b000
+`define LH_SUBFUN3  3'b001
+`define LW_SUBFUN3  3'b010
+`define LBU_SUBFUN3 3'b100
+`define LHU_SUBFUN3 3'b101
+
+`define SB_SUBFUN3  3'b000
+`define SH_SUBFUN3  3'b001
+`define SW_SUBFUN3  3'b010
+
 
 // Microarchitecture specific defines
 `define ONEHOT_DEBUG_OPCODE     0
@@ -50,3 +60,7 @@
 `define ONEHOT_ITYPE_ALU_INDEX  8
 `define ONEHOT_RTYPE_ALU_INDEX  9
 `define ONEHOT_FENCE_INDEX      10
+
+
+`define PROGRAM_MEMORY_SIZE     8
+`define BLOCK_MEMORY_SIZE       6
