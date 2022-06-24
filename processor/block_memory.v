@@ -1,6 +1,7 @@
 module block_memory #(
     parameter ADDRESS_SIZE = 10,
-    parameter WORD_SIZE = 32
+    parameter WORD_SIZE = 32,
+    parameter INITIALIZATION_LOCATION = ""
 ) (
     input wire clk,
     input wire read_enable,
@@ -14,6 +15,10 @@ module block_memory #(
 
 reg [WORD_SIZE - 1: 0] memory [0: 2**ADDRESS_SIZE - 1];
 
+
+initial begin
+    $readmemh(INITIALIZATION_LOCATION, memory);
+end
 
 always @(posedge clk) begin
     if (read_enable)    read_data <= memory[read_address];

@@ -33,7 +33,10 @@ wire [`BLOCK_MEMORY_SIZE - 1: 0] transformed_block_address;
 assign effective_address = input_register1_value + immediate;
 assign transformed_block_address = effective_address[`BLOCK_MEMORY_SIZE + 1: 2];
 
-block_memory #(.ADDRESS_SIZE(`BLOCK_MEMORY_SIZE)) block_memory_instance (
+block_memory #(
+    .ADDRESS_SIZE(`BLOCK_MEMORY_SIZE),
+    .INITIALIZATION_LOCATION("program/data.hex")
+) block_memory_instance (
     .clk(clk),
     .read_enable(read_enabled),
     .write_enable(write_enabled),
@@ -108,21 +111,28 @@ module program_memory(
     input wire clk,
     input [31: 0] address,
 
-    output reg [31: 0] instruction,
+    output wire [31: 0] instruction,
     output reg [31: 0] instruction_address
 );
-
-reg [31: 0] block_memory [0: 2**`PROGRAM_MEMORY_SIZE - 1];
 
 wire[`PROGRAM_MEMORY_SIZE - 1: 0] truncated_address;
 assign truncated_address = address[`PROGRAM_MEMORY_SIZE + 1 : 2];
 
-initial begin
-    $readmemh("program/program.hex", block_memory);
-end
+block_memory #(
+    .ADDRESS_SIZE(`PROGRAM_MEMORY_SIZE),
+    .INITIALIZATION_LOCATION("program/program.hex")
+) block_memory_instance (
+    .clk(clk),
+    .read_enable(1'b1),
+    .write_enable(1'b0),
+    .read_address(truncated_address),
+    .write_address(9'b0),
+    .write_data(32'b0),
+
+    .read_data(instruction)
+);
 
 always @(posedge clk) begin
-    instruction <= block_memory[truncated_address];
     instruction_address <= address;
 end
 
