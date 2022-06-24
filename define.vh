@@ -62,5 +62,5 @@
 `define ONEHOT_FENCE_INDEX      10
 
 
-`define PROGRAM_MEMORY_SIZE     8
-`define BLOCK_MEMORY_SIZE       6
+`define PROGRAM_MEMORY_SIZE     10
+`define BLOCK_MEMORY_SIZE       10

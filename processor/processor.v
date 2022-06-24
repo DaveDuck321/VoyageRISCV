@@ -152,14 +152,14 @@ alu_immediate_type alu_immediate_type_instance (
 wire request_clock_stall;
 wire wb_memory_decoding_error;
 wire [31: 0] wb_memory_read_write_to_rd;
-memory memory_instance (
+ram ram_instance (
     .clk(clk),
     .subfunction_3(id_subfunction_3),
     .input_register1_value(id_source_reg_1_contents),
     .input_register2_value(id_source_reg_2_contents),
     .immediate(id_immediate),
-    .request_write(id_opcode_selection[`ONEHOT_STORE_INDEX]),
-    .request_read(id_opcode_selection[`ONEHOT_LOAD_INDEX]),
+    .opcode_is_store(id_opcode_selection[`ONEHOT_STORE_INDEX]),
+    .opcode_is_load(id_opcode_selection[`ONEHOT_LOAD_INDEX]),
 
     .clk_stall(request_clock_stall),
     .decoding_error(wb_memory_decoding_error),
