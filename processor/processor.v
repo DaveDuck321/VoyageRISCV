@@ -220,7 +220,7 @@ pc_mux wb_pc_mux_instance (
 );
 
 integer current_pipeline_stage;
-always @(posedge clk) begin
+always @(posedge clk_with_stalls) begin
     case (current_pipeline_stage)
     0: current_pipeline_stage <= 1;
     1: current_pipeline_stage <= 2;
