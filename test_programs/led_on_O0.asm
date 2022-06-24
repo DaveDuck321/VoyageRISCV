@@ -1,10 +1,12 @@
 .global _start
 .align	4
+.set DATA_MEM_SIZE, 64
 
 _start:
 
 init:
-    nop
+    li		sp, DATA_MEM_SIZE
+
     addi    sp, sp, -16
     sw      ra, 12(sp)                      # 4-byte Folded Spill
     sw      s0, 8(sp)                       # 4-byte Folded Spill
@@ -17,5 +19,7 @@ init:
     li      a0, 240
     sb      a0, 0(a1)
     j       .LBB0_1
-.LBB0_1:                                # =>This Inner Loop Header: Depth=1
-    j       .LBB0_1
+
+
+.FINISH:
+    j       .FINISH
