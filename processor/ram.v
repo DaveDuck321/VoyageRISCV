@@ -126,7 +126,7 @@ block_memory #(
     .read_enable(1'b1),
     .write_enable(1'b0),
     .read_address(truncated_address),
-    .write_address(9'b0),
+    .write_address(`PROGRAM_MEMORY_SIZE'b0),
     .write_data(32'b0),
 
     .read_data(instruction)
