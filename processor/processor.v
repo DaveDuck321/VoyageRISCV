@@ -43,15 +43,15 @@ instruction_decode id_instruction_decode_instance (
     .immediate(id_immediate)
 );
 
-wire [31: 0] id_source_reg_1_contents;
-wire [31: 0] id_source_reg_2_contents;
+wire [31: 0] ex_source_reg_1_contents;
+wire [31: 0] ex_source_reg_2_contents;
 
-// These are filled in the wb pipeline stage
+// These are driven by the wb pipeline stage
 reg rd_write_enabled;
 reg [4: 0] rd_index;
 reg [31: 0] rd_write_value;
 
-registers id_wb_registers_instance (
+registers id_to_ex_registers_instance (
     .clk(clk_with_stalls),
     .read_index_1(id_source_reg_1),
     .read_index_2(id_source_reg_2),
@@ -60,21 +60,42 @@ registers id_wb_registers_instance (
     .write_index(rd_index),
     .write_value(rd_write_value),
 
-    .read1_value(id_source_reg_1_contents),
-    .read2_value(id_source_reg_2_contents)
+    .read1_value(ex_source_reg_1_contents),
+    .read2_value(ex_source_reg_2_contents)
+);
+
+
+wire [31: 0] ex_pc_of_current_instruction;
+wire [4: 0] ex_destination_reg;
+wire [2: 0] ex_subfunction_3;
+wire [6: 0] ex_subfunction_7;
+wire [31: 0] ex_immediate;
+wire [10: 0] ex_opcode_selection;
+
+id_to_ex_pipeline id_to_ex_pipeline_instance (
+    .clk(clk),
+    .id_pc_of_current_instruction(id_pc_of_current_instruction),
+    .id_destination_reg(id_destination_reg),
+    .id_subfunction_3(id_subfunction_3),
+    .id_subfunction_7(id_subfunction_7),
+    .id_immediate(id_immediate),
+    .id_opcode_selection(id_opcode_selection),
+
+    .ex_pc_of_current_instruction(ex_pc_of_current_instruction),
+    .ex_destination_reg(ex_destination_reg),
+    .ex_subfunction_3(ex_subfunction_3),
+    .ex_subfunction_7(ex_subfunction_7),
+    .ex_immediate(ex_immediate),
+    .ex_opcode_selection(ex_opcode_selection)
 );
 
 /* End: instruction decoding */
-
-// TODO: it makes sense to add a pipeline stage here IMO
-//  Note: if this is pipelined we could actucally select the correct type intermediate
-//    For now lets ignore it and see what happens to the critical path
 
 /* Begin: instructions */
 wire [31: 0] wb_lui_write_to_rd;
 lui ex_lui_instance (
     .clk(clk_with_stalls),
-    .immediate(id_immediate),
+    .immediate(ex_immediate),
 
     .result_to_write_rd(wb_lui_write_to_rd)
 );
@@ -82,8 +103,8 @@ lui ex_lui_instance (
 wire [31: 0] wb_auipc_write_to_rd;
 auipc ex_auipc_instance (
     .clk(clk_with_stalls),
-    .program_counter_of_lui(id_pc_of_current_instruction),
-    .immediate(id_immediate),
+    .program_counter_of_lui(ex_pc_of_current_instruction),
+    .immediate(ex_immediate),
 
     .result_to_write_rd(wb_auipc_write_to_rd)
 );
@@ -92,8 +113,8 @@ wire [31: 0] wb_jal_write_to_rd;
 wire [31: 0] wb_jal_write_to_pc;
 jal ex_jal_instance (
     .clk(clk_with_stalls),
-    .program_counter_of_JAL(id_pc_of_current_instruction),
-    .immediate(id_immediate),
+    .program_counter_of_JAL(ex_pc_of_current_instruction),
+    .immediate(ex_immediate),
 
     .result_to_write_rd(wb_jal_write_to_rd),
     .result_to_write_to_pc(wb_jal_write_to_pc)
@@ -103,10 +124,10 @@ wire [31: 0] wb_jalr_write_to_rd;
 wire [31: 0] wb_jalr_write_to_pc;
 jalr ex_jalr_instance (
     .clk(clk_with_stalls),
-    .program_counter_of_JALR(id_pc_of_current_instruction),
-    .subfunction_3(id_subfunction_3),
-    .input_register1_value(id_source_reg_1_contents),
-    .immediate(id_immediate),
+    .program_counter_of_JALR(ex_pc_of_current_instruction),
+    .subfunction_3(ex_subfunction_3),
+    .input_register1_value(ex_source_reg_1_contents),
+    .immediate(ex_immediate),
 
     .decoding_error(wb_decoding_errors[`ONEHOT_JALR_INDEX]),
     .result_to_write_rd(wb_jalr_write_to_rd),
@@ -116,11 +137,11 @@ jalr ex_jalr_instance (
 wire [31: 0] wb_branches_write_to_pc;
 branches branches_instance (
     .clk(clk_with_stalls),
-    .program_counter_of_branch(id_pc_of_current_instruction),
-    .subfunction_3(id_subfunction_3),
-    .immediate(id_immediate),
-    .input_register1_value(id_source_reg_1_contents),
-    .input_register2_value(id_source_reg_2_contents),
+    .program_counter_of_branch(ex_pc_of_current_instruction),
+    .subfunction_3(ex_subfunction_3),
+    .immediate(ex_immediate),
+    .input_register1_value(ex_source_reg_1_contents),
+    .input_register2_value(ex_source_reg_2_contents),
 
     .decoding_error(wb_decoding_errors[`ONEHOT_JALR_INDEX]),
     .result_to_write_to_pc(wb_branches_write_to_pc)
@@ -129,10 +150,10 @@ branches branches_instance (
 wire [31: 0] wb_rtype_alu_write_rd;
 alu_register_type alu_register_type_instance (
     .clk(clk_with_stalls),
-    .subfunction_3(id_subfunction_3),
-    .subfunction_7(id_subfunction_7),
-    .input_register1_value(id_source_reg_1_contents),
-    .input_register2_value(id_source_reg_2_contents),
+    .subfunction_3(ex_subfunction_3),
+    .subfunction_7(ex_subfunction_7),
+    .input_register1_value(ex_source_reg_1_contents),
+    .input_register2_value(ex_source_reg_2_contents),
 
     .decoding_error(wb_decoding_errors[`ONEHOT_RTYPE_ALU_INDEX]),
     .result_to_write_rd(wb_rtype_alu_write_rd)
@@ -141,9 +162,9 @@ alu_register_type alu_register_type_instance (
 wire [31: 0] wb_itype_alu_write_rd;
 alu_immediate_type alu_immediate_type_instance (
     .clk(clk_with_stalls),
-    .subfunction_3(id_subfunction_3),
-    .input_register_value(id_source_reg_1_contents),
-    .immediate(id_immediate),
+    .subfunction_3(ex_subfunction_3),
+    .input_register_value(ex_source_reg_1_contents),
+    .immediate(ex_immediate),
 
     .decoding_error(wb_decoding_errors[`ONEHOT_ITYPE_ALU_INDEX]),
     .result_to_write_rd(wb_itype_alu_write_rd)
@@ -154,12 +175,12 @@ wire wb_memory_decoding_error;
 wire [31: 0] wb_memory_read_write_to_rd;
 ram ram_instance (
     .clk(clk),
-    .subfunction_3(id_subfunction_3),
-    .input_register1_value(id_source_reg_1_contents),
-    .input_register2_value(id_source_reg_2_contents),
-    .immediate(id_immediate),
-    .opcode_is_store(id_opcode_selection[`ONEHOT_STORE_INDEX]),
-    .opcode_is_load(id_opcode_selection[`ONEHOT_LOAD_INDEX]),
+    .subfunction_3(ex_subfunction_3),
+    .input_register1_value(ex_source_reg_1_contents),
+    .input_register2_value(ex_source_reg_2_contents),
+    .immediate(ex_immediate),
+    .opcode_is_store(ex_opcode_selection[`ONEHOT_STORE_INDEX]),
+    .opcode_is_load(ex_opcode_selection[`ONEHOT_LOAD_INDEX]),
 
     .clk_stall(request_clock_stall),
     .decoding_error(wb_memory_decoding_error),
@@ -174,7 +195,7 @@ assign clk_with_stalls = clk && (!request_clock_stall);
 wire [31: 0] wb_program_counter_without_jump;
 program_counter program_counter_instance (
     .clk(clk_with_stalls),
-    .current_program_counter(id_pc_of_current_instruction),
+    .current_program_counter(ex_pc_of_current_instruction),
 
     .new_program_counter(wb_program_counter_without_jump)
 );
@@ -183,8 +204,8 @@ wire [4: 0] wb_rd_index;
 wire [10: 0] wb_opcode_selection;
 ex_to_wb_pipeline ex_to_wb_pipeline_instance (
     .clk(clk_with_stalls),
-    .ex_opcode_selection(id_opcode_selection),
-    .ex_rd_index(id_destination_reg),
+    .ex_opcode_selection(ex_opcode_selection),
+    .ex_rd_index(ex_destination_reg),
 
     .wb_opcode_selection(wb_opcode_selection),
     .wb_rd_index(wb_rd_index)
