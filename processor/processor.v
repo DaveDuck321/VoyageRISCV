@@ -17,7 +17,7 @@ program_memory if_program_memory_instance (
 );
 
 
-/* Begin: instruction decoding */
+/* Begin: instruction decode stage */
 wire id_opcode_decoding_error;
 wire [4: 0] id_source_reg_1;
 wire [4: 0] id_source_reg_2;
@@ -26,9 +26,7 @@ wire [2: 0] id_subfunction_3;
 wire [6: 0] id_subfunction_7;
 wire [31: 0] id_immediate;
 wire [10: 0] id_opcode_selection;
-wire [10: 0] wb_decoding_errors;
 
-// NOTE: these are not pipelined into latches
 instruction_decode id_instruction_decode_instance (
     .instruction(id_instruction),
 
@@ -63,7 +61,7 @@ registers id_to_ex_registers_instance (
     .read1_value(ex_source_reg_1_contents),
     .read2_value(ex_source_reg_2_contents)
 );
-
+/* End: instruction decode stage */
 
 wire [31: 0] ex_pc_of_current_instruction;
 wire [4: 0] ex_destination_reg;
@@ -89,9 +87,10 @@ id_to_ex_pipeline id_to_ex_pipeline_instance (
     .ex_opcode_selection(ex_opcode_selection)
 );
 
-/* End: instruction decoding */
 
-/* Begin: instructions */
+/* Begin: execute stage */
+wire [10: 0] ex_decoding_errors;
+
 wire [31: 0] wb_lui_write_to_rd;
 lui ex_lui_instance (
     .clk(clk_with_stalls),
@@ -129,7 +128,7 @@ jalr ex_jalr_instance (
     .input_register1_value(ex_source_reg_1_contents),
     .immediate(ex_immediate),
 
-    .decoding_error(wb_decoding_errors[`ONEHOT_JALR_INDEX]),
+    .decoding_error(ex_decoding_errors[`ONEHOT_JALR_INDEX]),
     .result_to_write_rd(wb_jalr_write_to_rd),
     .result_to_write_to_pc(wb_jalr_write_to_pc)
 );
@@ -143,7 +142,7 @@ branches branches_instance (
     .input_register1_value(ex_source_reg_1_contents),
     .input_register2_value(ex_source_reg_2_contents),
 
-    .decoding_error(wb_decoding_errors[`ONEHOT_JALR_INDEX]),
+    .decoding_error(ex_decoding_errors[`ONEHOT_JALR_INDEX]),
     .result_to_write_to_pc(wb_branches_write_to_pc)
 );
 
@@ -155,7 +154,7 @@ alu_register_type alu_register_type_instance (
     .input_register1_value(ex_source_reg_1_contents),
     .input_register2_value(ex_source_reg_2_contents),
 
-    .decoding_error(wb_decoding_errors[`ONEHOT_RTYPE_ALU_INDEX]),
+    .decoding_error(ex_decoding_errors[`ONEHOT_RTYPE_ALU_INDEX]),
     .result_to_write_rd(wb_rtype_alu_write_rd)
 );
 
@@ -166,7 +165,7 @@ alu_immediate_type alu_immediate_type_instance (
     .input_register_value(ex_source_reg_1_contents),
     .immediate(ex_immediate),
 
-    .decoding_error(wb_decoding_errors[`ONEHOT_ITYPE_ALU_INDEX]),
+    .decoding_error(ex_decoding_errors[`ONEHOT_ITYPE_ALU_INDEX]),
     .result_to_write_rd(wb_itype_alu_write_rd)
 );
 
@@ -188,10 +187,6 @@ ram ram_instance (
     .memory_mapped_io(output_io)
 );
 
-assign clk_with_stalls = clk && (!request_clock_stall);
-
-/* End: instructions */
-
 wire [31: 0] wb_program_counter_without_jump;
 program_counter program_counter_instance (
     .clk(clk_with_stalls),
@@ -199,6 +194,7 @@ program_counter program_counter_instance (
 
     .new_program_counter(wb_program_counter_without_jump)
 );
+/* End: execute stage */
 
 wire [4: 0] wb_rd_index;
 wire [10: 0] wb_opcode_selection;
@@ -211,6 +207,8 @@ ex_to_wb_pipeline ex_to_wb_pipeline_instance (
     .wb_rd_index(wb_rd_index)
 );
 
+
+/* Begin register write stage */
 wire wb_rd_write_enabled;
 wire [31: 0] wb_rd_write_value;
 rd_mux wb_rd_mux_instance (
@@ -239,6 +237,10 @@ pc_mux wb_pc_mux_instance (
 
     .new_pc(new_program_counter)
 );
+/* End register write stage */
+
+
+assign clk_with_stalls = clk && (!request_clock_stall);
 
 integer current_pipeline_stage;
 always @(posedge clk_with_stalls) begin
@@ -263,5 +265,4 @@ initial begin
     current_pipeline_stage = 0;
     if_program_counter = 0;
 end
-
 endmodule
