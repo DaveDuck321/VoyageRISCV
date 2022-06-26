@@ -12,5 +12,5 @@ module top(
     );
 
     assign led_columns = 4'b1110;
-    assign led_rows = ^logical_io_output;  // Convert to a common anode format
+    assign led_rows = ~logical_io_output;  // Convert to a common anode format
 endmodule
