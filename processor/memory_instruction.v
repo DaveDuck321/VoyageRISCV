@@ -18,8 +18,8 @@ module memory_instruction #(
     output reg [7: 0] memory_mapped_io = 8'h00
 );
 
-reg read_in_progress;
-reg write_in_progress;
+reg read_in_progress = 0;
+reg write_in_progress = 0;
 wire read_enabled;
 wire write_enabled;
 wire [31: 0] read_result;
@@ -49,23 +49,6 @@ block_memory #(
     .read_data(read_result)
 );
 
-wire [7: 0] byte_1 = read_result[7: 0];
-wire [7: 0] byte_2 = read_result[15: 8];
-wire [7: 0] byte_3 = read_result[23: 16];
-wire [7: 0] byte_4 = read_result[31: 24];
-
-wire [31: 0] load_signed_byte_result        = {{24{byte_1[7]}}, byte_1};
-wire [31: 0] load_unsigned_byte_result      = {24'b0, byte_1};
-wire [31: 0] load_signed_half_word_result   = {{16{byte_2[7]}}, byte_2, byte_1};
-wire [31: 0] load_unsigned_half_word_result = {16'b0, byte_2, byte_1};
-wire [31: 0] load_word_result               = {byte_4, byte_3, byte_2, byte_1};
-
-
-// TODO: misaligned accesses are NOT valid
-wire [4: 0] word_offset_for_store = 8 * effective_address[1: 0];
-wire [31: 0] store_byte_write_data = read_result & (32'hFF << word_offset_for_store) | ({24'b0, input_register2_value[7: 0]} <<  word_offset_for_store);
-wire [31: 0] store_half_word_write_data = read_result & (32'hFFFF << word_offset_for_store) | ({16'b0, input_register2_value[15: 0]} << word_offset_for_store);
-
 reg alignment_error;
 always @(*) begin
     case (subfunction_3)
@@ -90,7 +73,56 @@ always @(*) begin
     endcase
 end
 
+wire [7: 0] byte_1 = read_result[7: 0];
+wire [7: 0] byte_2 = read_result[15: 8];
+wire [7: 0] byte_3 = read_result[23: 16];
+wire [7: 0] byte_4 = read_result[31: 24];
+
+
+// Loading combinatorial logic
+reg [7: 0] byte_to_load;
+reg [15: 0] half_word_to_load;
+
+wire [31: 0] load_signed_byte_result        = {{24{byte_to_load[7]}}, byte_to_load};
+wire [31: 0] load_unsigned_byte_result      = {24'b0, byte_to_load};
+wire [31: 0] load_signed_half_word_result   = {{16{half_word_to_load[15]}}, half_word_to_load};
+wire [31: 0] load_unsigned_half_word_result = {16'b0, half_word_to_load};
+wire [31: 0] load_word_result               = read_result;
+
 always @(*) begin
+    case(effective_address[1: 0])
+    2'b00:      byte_to_load = byte_1;
+    2'b01:      byte_to_load = byte_2;
+    2'b10:      byte_to_load = byte_3;
+    2'b11:      byte_to_load = byte_4;
+    endcase
+
+    case(effective_address[1: 0])
+    2'b00:      half_word_to_load = {byte_2, byte_1};
+    2'b10:      half_word_to_load = {byte_4, byte_3};
+    default:    half_word_to_load = {16{1'bX}};  // TODO: Misaligned access is currently invalid
+    endcase
+end
+
+
+// Storing combinatorial logic
+reg [31: 0] store_byte_write_data;
+reg [31: 0] store_half_word_write_data;
+
+always @(*) begin
+    case(effective_address[1: 0])
+    2'b00:      store_byte_write_data = {byte_4, byte_3, byte_2, input_register2_value[7: 0]};
+    2'b01:      store_byte_write_data = {byte_4, byte_3, input_register2_value[7: 0], byte_1};
+    2'b10:      store_byte_write_data = {byte_4, input_register2_value[7: 0], byte_2, byte_1};
+    2'b11:      store_byte_write_data = {input_register2_value[7: 0], byte_3, byte_2, byte_1};
+    endcase
+
+    case(effective_address[1: 0])
+    2'b00:      store_half_word_write_data = {byte_4, byte_3, input_register2_value[15: 0]};
+    2'b10:      store_half_word_write_data = {input_register2_value[15: 0], byte_2, byte_1};
+    default:    store_half_word_write_data = {32{1'bX}};  // TODO: Misaligned access is currently invalid
+    endcase
+
     case (subfunction_3)
     `SB_SUBFUN3:    word_to_write_to_block_memory = store_byte_write_data;
     `SH_SUBFUN3:    word_to_write_to_block_memory = store_half_word_write_data;
@@ -98,6 +130,7 @@ always @(*) begin
     default:        word_to_write_to_block_memory = {32{1'bX}};
     endcase
 end
+
 
 always @(posedge clk) begin
     if (read_in_progress) begin
