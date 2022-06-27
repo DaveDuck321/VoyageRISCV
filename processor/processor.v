@@ -1,5 +1,7 @@
 module processor #(
-    parameter INITIAL_DELAY = 0
+    parameter INITIAL_DELAY = 0,
+    parameter PROGRAM_PATH = "program/program.hex",
+    parameter DATA_PATH = "program/data.hex"
 ) (
     input wire clk,
 
@@ -18,7 +20,7 @@ wire clk_with_stalls;
 reg [31: 0] if_program_counter;
 wire [31: 0] id_instruction;
 wire [31: 0] id_pc_of_current_instruction;
-program_memory if_program_memory_instance (
+program_memory #(.PROGRAM_PATH(PROGRAM_PATH)) if_program_memory_instance (
     .clk(clk_with_stalls),
     .address(if_program_counter),
 
@@ -195,7 +197,7 @@ debug ex_debug_instance (
 
 wire request_clock_stall;
 wire [31: 0] wb_memory_read_write_to_rd;
-ram ex_ram_instance (
+ram #(.DATA_PATH(DATA_PATH)) ex_ram_instance (
     .clk(clk),
     .subfunction_3(ex_subfunction_3),
     .input_register1_value(ex_source_reg_1_contents),

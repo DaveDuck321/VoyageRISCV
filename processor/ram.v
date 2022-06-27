@@ -1,6 +1,8 @@
 `include "define.vh"
 
-module ram(
+module ram #(
+    parameter DATA_PATH = ""
+) (
     input wire clk,
     input wire [2: 0] subfunction_3,
     input wire [31: 0] input_register1_value,
@@ -35,7 +37,7 @@ assign transformed_block_address = effective_address[`BLOCK_MEMORY_SIZE + 1: 2];
 
 block_memory #(
     .ADDRESS_SIZE(`BLOCK_MEMORY_SIZE),
-    .INITIALIZATION_LOCATION("program/data.hex")
+    .INITIALIZATION_LOCATION(DATA_PATH)
 ) block_memory_instance (
     .clk(clk),
     .read_enable(read_enabled),
@@ -131,7 +133,9 @@ end
 endmodule
 
 
-module program_memory(
+module program_memory #(
+    parameter PROGRAM_PATH = ""
+) (
     input wire clk,
     input [31: 0] address,
 
@@ -144,7 +148,7 @@ assign truncated_address = address[`PROGRAM_MEMORY_SIZE + 1 : 2];
 
 block_memory #(
     .ADDRESS_SIZE(`PROGRAM_MEMORY_SIZE),
-    .INITIALIZATION_LOCATION("program/program.hex")
+    .INITIALIZATION_LOCATION(PROGRAM_PATH)
 ) block_memory_instance (
     .clk(clk),
     .read_enable(1'b1),
