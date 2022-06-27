@@ -1,5 +1,5 @@
 PROJ = riscv
-COMMON_FILES_RELATIVE = error_propagation.v fence.v debug.v pipelines.v program_counter.v mux.v block_memory.v ram.v lui.v auipc.v branches.v jumps.v alu_immediate_type.v alu_register_type.v instruction_decode.v registers.v processor.v
+COMMON_FILES_RELATIVE = error_propagation.v fence.v debug.v pipelines.v program_counter.v mux.v block_memory.v memory_instruction.v lui.v auipc.v branches.v jumps.v alu_immediate_type.v alu_register_type.v instruction_decode.v registers.v processor.v
 COMMON_FILES = $(addprefix processor/, $(COMMON_FILES_RELATIVE))
 BUILD_DIR = build
 

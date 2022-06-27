@@ -197,7 +197,7 @@ debug ex_debug_instance (
 
 wire request_clock_stall;
 wire [31: 0] wb_memory_read_write_to_rd;
-ram #(.DATA_PATH(DATA_PATH)) ex_ram_instance (
+memory_instruction #(.DATA_PATH(DATA_PATH)) ex_memory_instruction_instance (
     .clk(clk),
     .subfunction_3(ex_subfunction_3),
     .input_register1_value(ex_source_reg_1_contents),

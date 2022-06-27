@@ -1,6 +1,6 @@
 `include "define.vh"
 
-module ram #(
+module memory_instruction #(
     parameter DATA_PATH = ""
 ) (
     input wire clk,
