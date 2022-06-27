@@ -3,7 +3,7 @@ module processor #(
 ) (
     input wire clk,
 
-    output reg error,
+    output wire error,
     output wire opcode_decoding_error,
     output wire [31: 0] instruction,
     output wire [31: 0] program_counter,
@@ -265,23 +265,34 @@ pc_mux wb_pc_mux_instance (
 
 
 assign clk_with_stalls = clk && (!request_clock_stall) && (!error) && (!in_initial_warmup);
+reg [1: 0] current_pipeline_stage;
 
+// Debugging and error propagation
 assign program_counter = if_program_counter;
 assign opcode_selection = ex_opcode_selection;
 assign instruction_errors = ex_errors;
 assign opcode_decoding_error = id_opcode_decoding_error;
 assign instruction = id_instruction;
+error_propagation error_propagation_instance (
+    .clk(clk),
+    .id_opcode_decoding_error(id_opcode_decoding_error),
+    .ex_errors(ex_errors),
+    .ex_opcode_selection(ex_opcode_selection),
+    .current_pipeline_stage(current_pipeline_stage),
 
-integer current_pipeline_stage;
+    .error(error)
+);
+
+
 always @(posedge clk_with_stalls) begin
     case (current_pipeline_stage)
-    0: current_pipeline_stage <= 1;  // IF
-    1: current_pipeline_stage <= 2;  // ID
-    2: current_pipeline_stage <= 3;  // EX
-    3: current_pipeline_stage <= 0;  // WB
+    2'd0: current_pipeline_stage <= 2'd1;  // IF
+    2'd1: current_pipeline_stage <= 2'd2;  // ID
+    2'd2: current_pipeline_stage <= 2'd3;  // EX
+    2'd3: current_pipeline_stage <= 2'd0;  // WB
     endcase
 
-    if (current_pipeline_stage == 3) begin
+    if (current_pipeline_stage == 2'd3) begin
         if_program_counter <= new_program_counter;
         rd_write_value <= wb_rd_write_value;
         rd_write_enabled <= wb_rd_write_enabled;
@@ -291,20 +302,7 @@ always @(posedge clk_with_stalls) begin
     end
 end
 
-// Throw any errors
-always @(posedge clk) begin
-    case (current_pipeline_stage)
-    2: begin
-        if (id_opcode_decoding_error) error <= 1;
-    end
-    3: begin
-        if (|(ex_errors & ex_opcode_selection))        error <= 1;  // Decoding error
-        if (|((ex_opcode_selection - 1) & ex_opcode_selection)) error <= 1;  // Multiple active opcodes
-    end
-    default: ;
-    endcase
-end
-
+// Disable the processor for the first INITIAL_DELAY clockcycles
 integer clock_cycles_since_start = 0;
 always @(posedge clk) begin
     clock_cycles_since_start <= clock_cycles_since_start + 1;
@@ -315,7 +313,6 @@ end
 
 initial begin
     current_pipeline_stage = 0;
-    error = 0;
     rd_write_enabled = 0;
     if_program_counter = 0;
 end
