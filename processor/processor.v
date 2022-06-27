@@ -1,8 +1,18 @@
-module processor(
+module processor #(
+    parameter INITIAL_DELAY = 0
+) (
     input wire clk,
+
+    output reg error,
+    output wire opcode_decoding_error,
+    output wire [31: 0] instruction,
+    output wire [31: 0] program_counter,
+    output wire [10: 0] opcode_selection,
+    output wire [10: 0] instruction_errors,
     output wire [7: 0] output_io
 );
 
+reg in_initial_warmup = 1;
 wire clk_with_stalls;
 
 reg [31: 0] if_program_counter;
@@ -15,7 +25,6 @@ program_memory if_program_memory_instance (
     .instruction(id_instruction),
     .instruction_address(id_pc_of_current_instruction)
 );
-
 
 /* Begin: instruction decode stage */
 wire id_opcode_decoding_error;
@@ -89,13 +98,14 @@ id_to_ex_pipeline id_to_ex_pipeline_instance (
 
 
 /* Begin: execute stage */
-wire [10: 0] ex_decoding_errors;
+wire [10: 0] ex_errors;
 
 wire [31: 0] wb_lui_write_to_rd;
 lui ex_lui_instance (
     .clk(clk_with_stalls),
     .immediate(ex_immediate),
 
+    .error(ex_errors[`ONEHOT_LUI_INDEX]),
     .result_to_write_rd(wb_lui_write_to_rd)
 );
 
@@ -105,6 +115,7 @@ auipc ex_auipc_instance (
     .program_counter_of_lui(ex_pc_of_current_instruction),
     .immediate(ex_immediate),
 
+    .error(ex_errors[`ONEHOT_AUIPI_INDEX]),
     .result_to_write_rd(wb_auipc_write_to_rd)
 );
 
@@ -115,6 +126,7 @@ jal ex_jal_instance (
     .program_counter_of_JAL(ex_pc_of_current_instruction),
     .immediate(ex_immediate),
 
+    .error(ex_errors[`ONEHOT_JAL_INDEX]),
     .result_to_write_rd(wb_jal_write_to_rd),
     .result_to_write_to_pc(wb_jal_write_to_pc)
 );
@@ -128,13 +140,13 @@ jalr ex_jalr_instance (
     .input_register1_value(ex_source_reg_1_contents),
     .immediate(ex_immediate),
 
-    .decoding_error(ex_decoding_errors[`ONEHOT_JALR_INDEX]),
+    .error(ex_errors[`ONEHOT_JALR_INDEX]),
     .result_to_write_rd(wb_jalr_write_to_rd),
     .result_to_write_to_pc(wb_jalr_write_to_pc)
 );
 
 wire [31: 0] wb_branches_write_to_pc;
-branches branches_instance (
+branches ex_branches_instance (
     .clk(clk_with_stalls),
     .program_counter_of_branch(ex_pc_of_current_instruction),
     .subfunction_3(ex_subfunction_3),
@@ -142,37 +154,48 @@ branches branches_instance (
     .input_register1_value(ex_source_reg_1_contents),
     .input_register2_value(ex_source_reg_2_contents),
 
-    .decoding_error(ex_decoding_errors[`ONEHOT_JALR_INDEX]),
+    .error(ex_errors[`ONEHOT_BRANCH_INDEX]),
     .result_to_write_to_pc(wb_branches_write_to_pc)
 );
 
 wire [31: 0] wb_rtype_alu_write_rd;
-alu_register_type alu_register_type_instance (
+alu_register_type ex_alu_register_type_instance (
     .clk(clk_with_stalls),
     .subfunction_3(ex_subfunction_3),
     .subfunction_7(ex_subfunction_7),
     .input_register1_value(ex_source_reg_1_contents),
     .input_register2_value(ex_source_reg_2_contents),
 
-    .decoding_error(ex_decoding_errors[`ONEHOT_RTYPE_ALU_INDEX]),
+    .error(ex_errors[`ONEHOT_RTYPE_ALU_INDEX]),
     .result_to_write_rd(wb_rtype_alu_write_rd)
 );
 
 wire [31: 0] wb_itype_alu_write_rd;
-alu_immediate_type alu_immediate_type_instance (
+alu_immediate_type ex_alu_immediate_type_instance (
     .clk(clk_with_stalls),
     .subfunction_3(ex_subfunction_3),
     .input_register_value(ex_source_reg_1_contents),
     .immediate(ex_immediate),
 
-    .decoding_error(ex_decoding_errors[`ONEHOT_ITYPE_ALU_INDEX]),
+    .error(ex_errors[`ONEHOT_ITYPE_ALU_INDEX]),
     .result_to_write_rd(wb_itype_alu_write_rd)
 );
 
+fence ex_fence_instance (
+    .clk(clk),
+
+    .error(ex_errors[`ONEHOT_FENCE_INDEX])
+);
+
+debug ex_debug_instance (
+    .clk(clk),
+
+    .error(ex_errors[`ONEHOT_DEBUG_INDEX])
+);
+
 wire request_clock_stall;
-wire wb_memory_decoding_error;
 wire [31: 0] wb_memory_read_write_to_rd;
-ram ram_instance (
+ram ex_ram_instance (
     .clk(clk),
     .subfunction_3(ex_subfunction_3),
     .input_register1_value(ex_source_reg_1_contents),
@@ -182,7 +205,8 @@ ram ram_instance (
     .opcode_is_load(ex_opcode_selection[`ONEHOT_LOAD_INDEX]),
 
     .clk_stall(request_clock_stall),
-    .decoding_error(wb_memory_decoding_error),
+    .load_error(ex_errors[`ONEHOT_LOAD_INDEX]),
+    .store_error(ex_errors[`ONEHOT_STORE_INDEX]),
     .result_to_write_rd(wb_memory_read_write_to_rd),
     .memory_mapped_io(output_io)
 );
@@ -240,15 +264,21 @@ pc_mux wb_pc_mux_instance (
 /* End register write stage */
 
 
-assign clk_with_stalls = clk && (!request_clock_stall);
+assign clk_with_stalls = clk && (!request_clock_stall) && (!error) && (!in_initial_warmup);
+
+assign program_counter = if_program_counter;
+assign opcode_selection = ex_opcode_selection;
+assign instruction_errors = ex_errors;
+assign opcode_decoding_error = id_opcode_decoding_error;
+assign instruction = id_instruction;
 
 integer current_pipeline_stage;
 always @(posedge clk_with_stalls) begin
     case (current_pipeline_stage)
-    0: current_pipeline_stage <= 1;
-    1: current_pipeline_stage <= 2;
-    2: current_pipeline_stage <= 3;
-    3: current_pipeline_stage <= 0;
+    0: current_pipeline_stage <= 1;  // IF
+    1: current_pipeline_stage <= 2;  // ID
+    2: current_pipeline_stage <= 3;  // EX
+    3: current_pipeline_stage <= 0;  // WB
     endcase
 
     if (current_pipeline_stage == 3) begin
@@ -261,8 +291,32 @@ always @(posedge clk_with_stalls) begin
     end
 end
 
+// Throw any errors
+always @(posedge clk) begin
+    case (current_pipeline_stage)
+    2: begin
+        if (id_opcode_decoding_error) error <= 1;
+    end
+    3: begin
+        if (|(ex_errors & ex_opcode_selection))        error <= 1;  // Decoding error
+        if (|((ex_opcode_selection - 1) & ex_opcode_selection)) error <= 1;  // Multiple active opcodes
+    end
+    default: ;
+    endcase
+end
+
+integer clock_cycles_since_start = 0;
+always @(posedge clk) begin
+    clock_cycles_since_start <= clock_cycles_since_start + 1;
+    if (clock_cycles_since_start == INITIAL_DELAY) begin
+        in_initial_warmup <= 1'b0;
+    end
+end
+
 initial begin
     current_pipeline_stage = 0;
+    error = 0;
+    rd_write_enabled = 0;
     if_program_counter = 0;
 end
 endmodule

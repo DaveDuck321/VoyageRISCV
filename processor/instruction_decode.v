@@ -4,8 +4,7 @@ module instruction_decode (
     input wire [31: 0] instruction,
 
     output reg  decoding_error,
-
-    output reg [10: 0] opcode_selection, // NOTE: This is still combinatorial and unclocked
+    output reg [10: 0] opcode_selection, // NOTE: This is combinatorial and unclocked
     output wire [4: 0] source_reg_1,
     output wire [4: 0] source_reg_2,
     output wire [4: 0] destination_reg,
@@ -80,7 +79,7 @@ always @(*) begin
     end
     `DEBUG_OPCODE: begin
         immediate = itype_immediate; // TODO: is this right?
-        opcode_selection = (11'b1 << `ONEHOT_DEBUG_OPCODE);
+        opcode_selection = (11'b1 << `ONEHOT_DEBUG_INDEX);
     end
     default: begin  // Error: unsupported opcode
         immediate = {32{1'bX}};
@@ -88,7 +87,7 @@ always @(*) begin
     end
     endcase
 
-    decoding_error = ^(|opcode_selection);
+    decoding_error = !(|opcode_selection);
 end
 
 endmodule

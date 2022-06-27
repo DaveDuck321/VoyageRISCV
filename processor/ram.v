@@ -9,12 +9,12 @@ module ram(
     input wire opcode_is_store,
     input wire opcode_is_load,
 
-    output reg clk_stall,
-    output reg decoding_error,
+    output reg clk_stall = 0,
+    output reg load_error,
+    output reg store_error,
     output reg [31: 0] result_to_write_rd,
-    output reg [7: 0] memory_mapped_io
+    output reg [7: 0] memory_mapped_io = 8'h00
 );
-
 
 reg read_in_progress;
 reg write_in_progress;
@@ -64,6 +64,30 @@ wire [4: 0] word_offset_for_store = 8 * effective_address[1: 0];
 wire [31: 0] store_byte_write_data = read_result & (32'hFF << word_offset_for_store) | ({24'b0, input_register2_value[7: 0]} <<  word_offset_for_store);
 wire [31: 0] store_half_word_write_data = read_result & (32'hFFFF << word_offset_for_store) | ({16'b0, input_register2_value[15: 0]} << word_offset_for_store);
 
+reg alignment_error;
+always @(*) begin
+    case (subfunction_3)
+    `LB_SUBFUN3, `LBU_SUBFUN3 /*, `SB_SUBFUN3 */: alignment_error = 0;
+    `LH_SUBFUN3, `LHU_SUBFUN3 /*, `SH_SUBFUN3 */: alignment_error = (effective_address[0] != 1'b0);
+    `LW_SUBFUN3 /*, `SW_SUBFUN3 */: alignment_error = (effective_address[1: 0] != 2'b00);
+    default: alignment_error = 1'bX;
+    endcase
+
+    case (subfunction_3)
+    `SB_SUBFUN3,
+    `SH_SUBFUN3,
+    `SW_SUBFUN3: store_error = alignment_error;
+    default:     store_error = 1'b1;  // Decode error
+    endcase
+
+    case (subfunction_3)
+    `LB_SUBFUN3, `LBU_SUBFUN3,
+    `LH_SUBFUN3, `LHU_SUBFUN3,
+    `LW_SUBFUN3:    load_error = alignment_error;
+    default:        load_error = 1'b1;  // Decode error
+    endcase
+end
+
 always @(*) begin
     case (subfunction_3)
     `SB_SUBFUN3:    word_to_write_to_block_memory = store_byte_write_data;
@@ -83,7 +107,7 @@ always @(posedge clk) begin
         `LW_SUBFUN3:    result_to_write_rd <= load_word_result;
         `LBU_SUBFUN3:   result_to_write_rd <= load_unsigned_byte_result;
         `LHU_SUBFUN3:   result_to_write_rd <= load_unsigned_half_word_result;
-        default: decoding_error <= 1;
+        default:        result_to_write_rd <= {32{1'bX}};
         endcase
     end else if (opcode_is_load) begin
         clk_stall <= 1;

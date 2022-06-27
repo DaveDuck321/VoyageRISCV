@@ -6,7 +6,7 @@ module alu_immediate_type (
     input wire [31: 0] input_register_value,
     input wire [31: 0] immediate,
 
-    output reg decoding_error,
+    output reg error,
     output reg [31: 0] result_to_write_rd
 );
 
@@ -46,8 +46,24 @@ assign left_shift_result = input_register_value << shift_amount;
 assign logical_right_shift_result = input_register_value >> shift_amount;
 assign arithmetic_right_shift_result = input_register_value >>> shift_amount;
 
-initial begin
-    decoding_error = 0;
+always @(*) begin
+    case (subfunction_3)
+    `ADD_SUBFUNC3,
+    `SLT_SUBFUNC3,
+    `SLTU_SUBFUNC3,
+    `XOR_SUBFUNC3,
+    `OR_SUBFUN3,
+    `AND_SUBFUN3,
+    `SLL_SUBFUNC3:     error = 0;
+    `SRL_SUBFUNC3: begin
+        case (shift_type_indicator)
+        `SIGNED_MODE_IMMEDIATE_INDICATOR,
+        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: error = 0;
+        default:    error = 1;
+        endcase
+    end
+    default:    error = 1;
+    endcase
 end
 
 always @(posedge clk) begin
@@ -64,10 +80,10 @@ always @(posedge clk) begin
         case (shift_type_indicator)
         `SIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= arithmetic_right_shift_result;
         `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= logical_right_shift_result;
-        default: decoding_error <= 1;
+        default: result_to_write_rd <= {32{1'bX}};
         endcase
     end
-    default: decoding_error <= 1;
+    default: result_to_write_rd <= {32{1'bX}};
     endcase
 end
 

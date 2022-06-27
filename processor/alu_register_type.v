@@ -7,7 +7,7 @@ module alu_register_type (
     input wire [31: 0] input_register1_value,
     input wire [31: 0] input_register2_value,
 
-    output reg decoding_error,
+    output reg error,
     output reg [31: 0] result_to_write_rd
 );
 
@@ -46,64 +46,57 @@ assign left_shift_result = input_register1_value << shift_amount;
 assign logical_right_shift_result = input_register1_value >> shift_amount;
 assign arithmetic_right_shift_result = input_register1_value >>> shift_amount;
 
-initial begin
-    decoding_error = 0;
+
+always @(*) begin
+    case (subfunction_7)
+    `SIGNED_MODE_IMMEDIATE_INDICATOR: begin
+        case(subfunction_3)
+        `ADD_SUBFUNC3,
+        `SRL_SUBFUNC3:  error = 0;
+        default:        error = 1;
+        endcase
+    end
+    `UNSIGNED_MODE_IMMEDIATE_INDICATOR: begin
+        case(subfunction_3)
+        `ADD_SUBFUNC3,
+        `SLL_SUBFUNC3,
+        `SLT_SUBFUNC3,
+        `SLTU_SUBFUNC3,
+        `XOR_SUBFUNC3,
+        `SRL_SUBFUNC3,
+        `OR_SUBFUN3,
+        `AND_SUBFUN3:   error = 0;
+        default:        error = 1;
+        endcase
+    end
+    default:            error = 1;
+    endcase
 end
+
 
 always @(posedge clk) begin
     case (subfunction_3)
     `ADD_SUBFUNC3: begin
         case (subfunction_7)
-        `SIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= addition_result;
+        `SIGNED_MODE_IMMEDIATE_INDICATOR:   result_to_write_rd <= addition_result;
         `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= subtraction_result;
-        default: decoding_error <= 1;
+        default: result_to_write_rd <= {32{1'bX}};
         endcase
     end
-    `SLT_SUBFUNC3: begin
+    `SLT_SUBFUNC3:  result_to_write_rd <= slt_result;
+    `SLTU_SUBFUNC3: result_to_write_rd <= sltu_result;
+    `XOR_SUBFUNC3:  result_to_write_rd <= bitwise_xor_result;
+    `OR_SUBFUN3:    result_to_write_rd <= bitwise_or_result;
+    `AND_SUBFUN3:   result_to_write_rd <= bitwise_and_result;
+    `SLL_SUBFUNC3:  result_to_write_rd <= left_shift_result;
+    `SRL_SUBFUNC3: begin  // TODO: try putting this in the sequential logic
         case (subfunction_7)
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= slt_result;
-        default: decoding_error <= 1;
-        endcase
-    end
-    `SLTU_SUBFUNC3:begin
-        case (subfunction_7)
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= sltu_result;
-        default: decoding_error <= 1;
-        endcase
-    end
-    `XOR_SUBFUNC3: begin
-        case (subfunction_7)
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= bitwise_xor_result;
-        default: decoding_error <= 1;
-        endcase
-    end
-    `OR_SUBFUN3: begin
-        case (subfunction_7)
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= bitwise_or_result;
-        default: decoding_error <= 1;
-        endcase
-    end
-    `AND_SUBFUN3: begin
-        case (subfunction_7)
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= bitwise_and_result;
-        default: decoding_error <= 1;
-        endcase
-    end
-    `SLL_SUBFUNC3: begin
-        case (subfunction_7)
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= left_shift_result;
-        default: decoding_error <= 1;
-        endcase
-    end
-    `SRL_SUBFUNC3: begin
-        // TODO: try putting this in the sequential logic
-        case (subfunction_7)
-        `SIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= arithmetic_right_shift_result;
+        `SIGNED_MODE_IMMEDIATE_INDICATOR:   result_to_write_rd <= arithmetic_right_shift_result;
         `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= logical_right_shift_result;
-        default: decoding_error <= 1;
+        default: result_to_write_rd <= {32{1'bX}};
         endcase
     end
-    default: decoding_error <= 1;
+    default: result_to_write_rd <= {32{1'bX}};
     endcase
 end
 

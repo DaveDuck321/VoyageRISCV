@@ -49,7 +49,7 @@
 
 
 // Microarchitecture specific defines
-`define ONEHOT_DEBUG_OPCODE     0
+`define ONEHOT_DEBUG_INDEX      0
 `define ONEHOT_LUI_INDEX        1
 `define ONEHOT_AUIPI_INDEX      2
 `define ONEHOT_JAL_INDEX        3

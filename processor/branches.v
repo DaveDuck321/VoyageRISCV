@@ -8,13 +8,9 @@ module branches(
     input wire [31: 0] input_register1_value,
     input wire [31: 0] input_register2_value,
 
-    output reg decoding_error,
+    output reg error,
     output reg [31: 0] result_to_write_to_pc
 );
-
-initial begin
-    decoding_error = 0;
-end
 
 wire [31: 0] pc_after_taking_branch;
 wire [31: 0] pc_without_taking_branch;  // TODO: this is duplicated: remove later
@@ -34,6 +30,29 @@ assign is_less_than_unsigned = ($unsigned(input_register1_value) < $unsigned(inp
 assign is_gte_signed = ($signed(input_register1_value) >= $signed(input_register2_value));
 assign is_gte_unsigned = ($unsigned(input_register1_value) >= $unsigned(input_register2_value));
 
+reg decoding_error;
+always @(*) begin
+    case(subfunction_3)
+    `BEQ_SUBFUNC3,
+    `BNE_SUBFUNC3,
+    `BLT_SUBFUNC3,
+    `BGT_SUBFUNC3,
+    `BLTU_SUBFUNC3,
+    `BGEU_SUBFUNC3: decoding_error = 0;
+    default:        decoding_error  = 1;
+    endcase
+
+    // TODO: this is incorrect!! From the spec:
+    /*
+        The conditional branch instructions will generate an instruction-address-misaligned exception if the
+        target address is not aligned to a four-byte boundary and the branch condition evaluates to true.
+        If the branch condition evaluates to false, the instruction-address-misaligned exception will not be
+        raised.
+    */
+    // Maybe move this into the instruction fetch stage? This would also remove the need for jump alignment checks
+    error = decoding_error || (pc_after_taking_branch[1] != 1'b0);
+end
+
 always @(posedge clk) begin
     case(subfunction_3)
     `BEQ_SUBFUNC3:  result_to_write_to_pc <= (are_equal             ? pc_after_taking_branch : pc_without_taking_branch);
@@ -42,7 +61,7 @@ always @(posedge clk) begin
     `BGT_SUBFUNC3:  result_to_write_to_pc <= (is_gte_signed         ? pc_after_taking_branch : pc_without_taking_branch);
     `BLTU_SUBFUNC3: result_to_write_to_pc <= (is_less_than_unsigned ? pc_after_taking_branch : pc_without_taking_branch);
     `BGEU_SUBFUNC3: result_to_write_to_pc <= (is_gte_unsigned       ? pc_after_taking_branch : pc_without_taking_branch);
-    default: decoding_error <= 1;
+    default:        result_to_write_to_pc <= {32{1'bX}};
     endcase
 end
 
