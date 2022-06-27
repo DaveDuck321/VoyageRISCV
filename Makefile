@@ -1,6 +1,9 @@
 PROJ = riscv
 COMMON_FILES_RELATIVE = error_propagation.v fence.v debug.v pipelines.v program_counter.v mux.v block_memory.v memory_instruction.v lui.v auipc.v branches.v jumps.v alu_immediate_type.v alu_register_type.v instruction_decode.v registers.v processor.v
 COMMON_FILES = $(addprefix processor/, $(COMMON_FILES_RELATIVE))
+TESTS = memory_instruction_tb
+TEST_BENCHES = $(addsuffix .tb, $(TESTS))
+
 BUILD_DIR = build
 
 simulation: lint
@@ -19,6 +22,13 @@ hardware_tangnano9k: lint
 
 lint:
 	verilator -Wall -Wno-DECLFILENAME -Wno-UNUSED --lint-only $(COMMON_FILES)
+
+%.tb: tests/%.v $(COMMON_FILES)
+	@iverilog $(COMMON_FILES) $< -o $(BUILD_DIR)/$@
+	@vvp $(BUILD_DIR)/$@
+
+run_tests: $(TEST_BENCHES)
+	@echo "Tests finished"
 
 clean:
 	rm *.asc *.bin *blif

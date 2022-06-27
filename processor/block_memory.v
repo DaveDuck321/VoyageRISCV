@@ -17,7 +17,7 @@ reg [WORD_SIZE - 1: 0] memory [0: 2**ADDRESS_SIZE - 1];
 
 
 initial begin
-    $readmemh(INITIALIZATION_LOCATION, memory);
+    if (INITIALIZATION_LOCATION != "") $readmemh(INITIALIZATION_LOCATION, memory);
 end
 
 always @(posedge clk) begin
