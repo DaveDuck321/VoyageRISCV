@@ -32,7 +32,7 @@ assign write_enabled = write_in_progress;
 wire [31: 0] effective_address;
 wire [`BLOCK_MEMORY_SIZE - 1: 0] transformed_block_address;
 
-assign effective_address = input_register1_value + immediate;
+assign effective_address = input_register1_value + immediate - 32'h1000;
 assign transformed_block_address = effective_address[`BLOCK_MEMORY_SIZE + 1: 2];
 
 block_memory #(
@@ -154,7 +154,7 @@ always @(posedge clk) begin
         clk_stall <= 0;
         write_in_progress <= 0;
     end else if (opcode_is_store) begin
-        if (effective_address == 32'h2000) begin
+        if (effective_address == 32'h1000) begin
             memory_mapped_io <= input_register2_value[7: 0];
         end else begin
             clk_stall <= 1;

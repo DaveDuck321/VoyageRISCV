@@ -1,12 +1,7 @@
-.global _start
+.global main
 .align	4
-.set DATA_MEM_SIZE, 64
 
-_start:
-
-init:
-    li		sp, DATA_MEM_SIZE
-
+main:
     addi    sp, sp, -16
     sw      ra, 12(sp)                      # 4-byte Folded Spill
     sw      s0, 8(sp)                       # 4-byte Folded Spill

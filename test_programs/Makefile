@@ -1,27 +1,34 @@
-AS = riscv32-unknown-elf-as
-CC = riscv32-unknown-elf-gcc
-OBJ_COPY = riscv32-unknown-elf-objcopy
-SREC2HEX = srec2hex  # TODO: understand obj_copy well enough to remove this
+include config.mk
 
-BUILD_PREFIX = ../build/
+BUILD_PREFIX = ../build
 OUTPUT_PREFIX = ../program/
-OUT_ELF = program.out
 OUT_SREC = program.sr
+
+INIT_OBJECT = $(BUILD_PREFIX)/init.o
+BUILD_DIR_PLACEHOLDER = $(BUILD_PREFIX)/.keep
 
 error:
 	@echo "Choose a target"
 	@exit 2
 
-led_on_O0: led_on_O0_impl common
-led_on_O0_impl:
-	$(AS) -o $(BUILD_PREFIX)/$(OUT_ELF) led_on_O0.asm
+$(BUILD_DIR_PLACEHOLDER):
+	mkdir $(BUILD_PREFIX) -p
+	touch $@
 
-led_on_O3: led_on_O3_impl common
-led_on_O3_impl:
-	$(AS) -o $(BUILD_PREFIX)/$(OUT_ELF) led_on_O3.asm
+$(BUILD_PREFIX)/%.o: %.asm $(BUILD_DIR_PLACEHOLDER)
+	$(AS) $(C_FLAGS) $< -o $@
 
-common:
-	$(OBJ_COPY) -O srec $(BUILD_PREFIX)/$(OUT_ELF) $(BUILD_PREFIX)/$(OUT_SREC)
+$(BUILD_PREFIX)/%.o: %.cpp $(BUILD_DIR_PLACEHOLDER)
+	$(CXX) $(C_FLAGS) -c $< -o $@
+
+$(INIT_OBJECT): init.S $(BUILD_DIR_PLACEHOLDER)
+	$(AS) $(C_FLAGS) $< -o $@
+
+$(BUILD_PREFIX)/%.elf: $(BUILD_PREFIX)/%.o $(INIT_OBJECT) link.ld
+	$(LD) $(LD_FLAGS) $(INIT_OBJECT) $< -o $@ -lgcc
+
+flash/%: $(BUILD_PREFIX)/%.elf $(BUILD_PREFIX)/%.o $(INIT_OBJECT)
+	$(OBJ_COPY) -O srec $< $(BUILD_PREFIX)/$(OUT_SREC)
 
 	cd $(BUILD_PREFIX);\
 	$(SREC2HEX) -b 4096 $(OUT_SREC) 2> /dev/null
@@ -29,3 +36,6 @@ common:
 	mkdir -p $(OUTPUT_PREFIX)
 	mv $(BUILD_PREFIX)/program.hex $(OUTPUT_PREFIX)
 	mv $(BUILD_PREFIX)/data.hex $(OUTPUT_PREFIX)
+
+.PHONY : error test/%
+.PRECIOUS: $(BUILD_PREFIX)/%.elf $(BUILD_PREFIX)/%.o
