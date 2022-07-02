@@ -78,8 +78,8 @@ always @(posedge clk) begin
     case (subfunction_3)
     `ADD_SUBFUNC3: begin
         case (subfunction_7)
-        `SIGNED_MODE_IMMEDIATE_INDICATOR:   result_to_write_rd <= addition_result;
-        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= subtraction_result;
+        `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= addition_result;
+        `SIGNED_MODE_IMMEDIATE_INDICATOR:   result_to_write_rd <= subtraction_result;
         default: result_to_write_rd <= {32{1'bX}};
         endcase
     end
@@ -91,8 +91,8 @@ always @(posedge clk) begin
     `SLL_SUBFUNC3:  result_to_write_rd <= left_shift_result;
     `SRL_SUBFUNC3: begin  // TODO: try putting this in the sequential logic
         case (subfunction_7)
-        `SIGNED_MODE_IMMEDIATE_INDICATOR:   result_to_write_rd <= arithmetic_right_shift_result;
         `UNSIGNED_MODE_IMMEDIATE_INDICATOR: result_to_write_rd <= logical_right_shift_result;
+        `SIGNED_MODE_IMMEDIATE_INDICATOR:   result_to_write_rd <= arithmetic_right_shift_result;
         default: result_to_write_rd <= {32{1'bX}};
         endcase
     end
