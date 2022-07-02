@@ -15,7 +15,17 @@ reg [31: 0] register_bank[2**5 - 1 : 0];
 
 always @(posedge clk) begin
     // Avoid writing to the 'zero' register
-    if (write_enabled && write_index != 5'b0) register_bank[write_index] <= write_value;
+    if (write_enabled && write_index != 5'b0) begin
+        register_bank[write_index] <= write_value;
+
+`ifdef SIMULATION
+        if (^write_value === 1'bX) begin
+            $error("Undefined register write");
+            $finish(1);
+        end
+`endif
+
+    end
 
     read1_value <= register_bank[read_index_1];
     read2_value <= register_bank[read_index_2];

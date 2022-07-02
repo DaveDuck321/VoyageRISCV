@@ -147,12 +147,27 @@ always @(posedge clk) begin
     end else if (opcode_is_load) begin
         clk_stall <= 1;
         read_in_progress <= 1;
-    end
 
+`ifdef SIMULATION
+        if($signed(effective_address) < $signed(32'h0) || $signed(effective_address) > $signed(32'h1000)) begin
+            $error("Data read '%x' out of range", input_register1_value + immediate);
+            $finish(1);
+        end
+`endif
+
+    end
 
     if (write_in_progress) begin
         clk_stall <= 0;
         write_in_progress <= 0;
+
+`ifdef SIMULATION
+        if(^effective_address === 1'bX) begin
+            $error("Attempt memory write to an undefined address: '%x'", effective_address);
+            $finish(1);
+        end
+`endif
+
     end else if (opcode_is_store) begin
         if (effective_address == 32'h1000) begin
             memory_mapped_io <= input_register2_value[7: 0];

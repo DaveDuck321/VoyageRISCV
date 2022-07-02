@@ -7,7 +7,7 @@ TEST_BENCHES = $(addsuffix .tb, $(TESTS))
 BUILD_DIR = build
 
 simulation: lint
-	iverilog -o $(BUILD_DIR)/$(PROJ).out iverilog_toplevel.v $(COMMON_FILES)
+	iverilog -DSIMULATION -o $(BUILD_DIR)/$(PROJ).out iverilog_toplevel.v $(COMMON_FILES)
 
 hardware_ice40: lint
 	yosys -q -p "synth_ice40 -top top -json $(BUILD_DIR)/$(PROJ).json" icefun/*.v $(COMMON_FILES)
