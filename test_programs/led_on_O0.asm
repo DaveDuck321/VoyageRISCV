@@ -18,8 +18,6 @@ init:
     lw      a1, -16(s0)
     li      a0, 240
     sb      a0, 0(a1)
-    j       .LBB0_1
-
 
 .FINISH:
     j       .FINISH
