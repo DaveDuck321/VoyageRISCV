@@ -179,7 +179,7 @@ module decode_btype_immediate (
 );
 
 // | imm[12|10:5] | rs2 | rs1 | funct3 | imm[4:1|11] | opcode | 
-assign immediate = {instruction[31: 13], instruction[31], instruction[7], instruction[30: 25], instruction[11: 8], 1'b0};
+assign immediate = {sign_extension[31: 13], instruction[31], instruction[7], instruction[30: 25], instruction[11: 8], 1'b0};
 
 endmodule
 
